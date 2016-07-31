@@ -1,0 +1,165 @@
+---
+title: "Reproducible Research: Peer Assessment 2"
+output: 
+  html_document:
+    keep_md: true
+---
+## Synopsis  
+Need to put summary here
+
+
+## Load libraries
+```{r libraries}
+suppressPackageStartupMessages({
+  require(data.table)
+  require(dplyr)
+  require(lubridate)
+  require(ggplot2)
+  require(grid)
+  require(gridExtra)
+  })
+```
+
+
+## Data load
+```{r read_data, cache=TRUE}
+raw_data <- read.csv('repdata%2Fdata%2FStormData.csv.bz2', stringsAsFactors = FALSE)
+```
+
+## Data Processing
+
+The storm database has been built up over a number of years.   
+The event type (EVTYPE) field is free text and contains entries  
+that are very similar and some spelling errors. Entries that are  
+similar have been grouped together (eg. everything containing  
+'hurricane').  
+
+```{r process_data}
+
+fix_EVTYPE <- function(x, grep_string, replace_string) {
+  idx <- grepl(grep_string, x$EVTYPE, ignore.case = TRUE )
+  res <- x
+  if( sum(idx) > 0 ) {
+    cat('Found', paste0(unique(x[idx,'EVTYPE']), collapse=', '), '\n')
+    cat('Replacing with', replace_string, '\n' )
+    res[idx,'EVTYPE'] <- replace_string
+  }
+  return(res)
+}
+
+clean_data <- as.data.table(raw_data) %>%
+                mutate(YEAR = year(mdy_hms(BGN_DATE))) %>%
+                mutate(PROPDMGVAL = PROPDMG * ifelse( PROPDMGEXP == 'K', 1e-3,
+                                              ifelse( PROPDMGEXP == 'M', 1,
+                                              ifelse( PROPDMGEXP == 'B', 1e3, 0))))
+
+clean_data <- fix_EVTYPE(clean_data, 'hurricane', 'HURRICANE')
+clean_data <- fix_EVTYPE(clean_data, 'TSTM|thunderstorm', 'THUNDERSTORM')
+clean_data <- fix_EVTYPE(clean_data, 'heat', 'HEAT')
+clean_data <- fix_EVTYPE(clean_data, 'flood', 'FLOOD')
+clean_data <- fix_EVTYPE(clean_data, 'cold|winter', 'COLD')
+clean_data <- fix_EVTYPE(clean_data, 'rip', 'RIP')
+```
+
+## Selection of time period
+
+Using recent data has 3 advantages  
+1. Database is more complete  
+2. Reflective of recent climatic conditions  
+3. Reflective of CURRENT infrastructure and support  
+
+The last one is the most important - we don't want to have a response to  
+damage/fatalities that have previously occurred where infrastructure and/or  
+support has already changed because of this.  
+
+```{r analyse_time_series}
+time_data <- group_by(clean_data, YEAR) %>%
+               summarise(total_death  = sum(FATALITIES),
+                         total_damage = sum(PROPDMGVAL)
+                        )
+
+death_plot <- qplot(YEAR,
+                    total_death,
+                    data = time_data,
+                    ylab = 'total fatalities',
+                    geom = c('point', 'line')
+                   )      
+
+damage_plot <- qplot(YEAR,
+                     total_damage,
+                     data = time_data,
+                     ylab = 'total damage (millions)',
+                     geom = c('point', 'line')
+                    )
+
+grid.arrange( death_plot, damage_plot, ncol=1)
+
+recent_data <- filter( clean_data, YEAR >= 1993 )
+```
+
+## Results
+
+HEAT causes most deaths on average over the considered time period.  
+In addition, this type has highest number of deaths in a single year.  
+FLOOD has next most deaths on average, although TORNADO has second highest number  
+of deaths in a single year.  
+
+```{r results}
+# Cannot use mean function within summarise because this will group by event types
+# and take the average over the series of individual events
+
+yearly_data <- group_by(recent_data, YEAR, EVTYPE)        %>%
+                 summarise( yearly_death = sum(FATALITIES))
+
+total_data <- group_by(yearly_data, EVTYPE) %>%
+                 summarise(total_death = sum(yearly_death),
+                           avg_death   = mean(yearly_death))
+
+death_data <- arrange(total_data, desc(total_death))
+
+idx <- yearly_data$EVTYPE %in% death_data$EVTYPE[1:5]
+
+qplot(EVTYPE,
+      yearly_death,
+      data = yearly_data[idx,],
+      geom = 'boxplot',
+      xlab = 'Event Type',
+      ylab = 'Yearly Fatalities',
+      main = 'Top 5 Event Types for fatalities since 1993'
+      )
+
+cat('NOTE: Boxplot removes outliers when determining average\n\n')
+
+cat('Table of Average Yearly Fatalities for Top 5 Event Types\n')
+
+print(death_data[1:5,])
+
+#----------------------------------
+
+yearly_data <- group_by(recent_data, YEAR, EVTYPE)        %>%
+                 summarise( yearly_damage = sum(PROPDMGVAL))
+
+total_data <- group_by(yearly_data, EVTYPE) %>%
+                 summarise(total_damage = sum(yearly_damage),
+                           avg_damage   = mean(yearly_damage))
+
+damage_data <- arrange(total_data, desc(total_damage))
+
+idx <- yearly_data$EVTYPE %in% damage_data$EVTYPE[1:5]
+
+xxxxx
+qplot(EVTYPE,
+      total,
+      data = damage_data,
+      geom = 'boxplot',
+      xlab = 'Event Type',
+      ylab = 'Yearly Damage (millions)',
+      main = 'Top 5 Event Types for property damage since 1993'
+      )
+
+cat('NOTE: Boxplot removes outliers when determining average\n\n')
+
+cat('Table of Average Yearly Property Damage (millions) for Top 5 Event Types\n')
+print(avg_damage_by_type[1:5,])
+
+```
