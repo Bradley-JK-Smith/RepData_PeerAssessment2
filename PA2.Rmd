@@ -1,12 +1,11 @@
 ---
-title: "Reproducible Research: Peer Assessment 2"
+title: "Since 1993, HEAT has caused most fatalities, while FLOOD has caused most property damage"
 output: 
   html_document:
     keep_md: true
 ---
 ## Synopsis  
-Need to put summary here
-
+Analysis of the U.S. National Oceanic and Atmospheric Administation (NOAA) storm database shows that in the period since 1993, HEAT events have caused the most fatalities while FLOOD events have caused the most property damage. The period since 1993 has been chosen because that data is both more complete and more reflective of current infrastructure. The impact of major storms and weather events is highly variable and planning should consider both the peak yearly fatalities and damage as well as the total fatalities and damage. This investigation has not considered correlation between event types such as flooding directly caused by otherwise labelled storm events. For this analysis, event types have been combined however further consolidation and categorisation of event types in the database would be useful.
 
 ## Load libraries
 ```{r libraries}
@@ -21,18 +20,29 @@ suppressPackageStartupMessages({
 ```
 
 
-## Data load
-```{r read_data, cache=TRUE}
-raw_data <- read.csv('repdata%2Fdata%2FStormData.csv.bz2', stringsAsFactors = FALSE)
+## Data Processing
+Data is loaded from the compressed database extraction.  
+
+Only the 5 columns that are used are extracted.  
+
+Event type (EVTYPE) entries that are similar have been grouped together (eg. everything containing 'hurricane'). The EVTYPE field is free text and appears to have been built up over the years. It contains entries that are almost the same and some abbreviations (eg. TSTM for Thunderstorm) as well as obvious spelling errors.
+
+```{r load_data, cache=TRUE}
+raw_data <- read.csv('repdata%2Fdata%2FStormData.csv.bz2',
+                     colClasses = c('NULL',
+                                    'character',     # BGN_DATE
+                                    rep('NULL',5),
+                                    'character',     # EVTYPE
+                                    rep('NULL', 14),
+                                    'numeric',     # FATALITIES
+                                    'NULL',
+                                    'numeric',       # PROPDMG
+                                    'character',     # PROPDMGEXP
+                                    rep('NULL', 11)
+                                   ),
+                     stringsAsFactors = FALSE)
 ```
 
-## Data Processing
-
-The storm database has been built up over a number of years.   
-The event type (EVTYPE) field is free text and contains entries  
-that are very similar and some spelling errors. Entries that are  
-similar have been grouped together (eg. everything containing  
-'hurricane').  
 
 ```{r process_data}
 
@@ -81,21 +91,28 @@ time_data <- group_by(clean_data, YEAR) %>%
 death_plot <- qplot(YEAR,
                     total_death,
                     data = time_data,
-                    ylab = 'total fatalities',
+                    ylab = 'fatalities',
                     geom = c('point', 'line')
                    )      
 
 damage_plot <- qplot(YEAR,
                      total_damage,
                      data = time_data,
-                     ylab = 'total damage (millions)',
+                     ylab = 'property damage (millions)',
                      geom = c('point', 'line')
                     )
 
-grid.arrange( death_plot, damage_plot, ncol=1)
+grid.arrange( death_plot,
+              damage_plot,
+              ncol = 1,
+              main = 'Time Series analysis of NOAA Storm Database'
+            )
 
 recent_data <- filter( clean_data, YEAR >= 1993 )
 ```
+Time analysis of fatalities and property damage indicates that the number
+of database entries has increased over recent years. As a result, only data
+from 1993 inclusive has been used.
 
 ## Results
 
@@ -104,20 +121,17 @@ In addition, this type has highest number of deaths in a single year.
 FLOOD has next most deaths on average, although TORNADO has second highest number  
 of deaths in a single year.  
 
-```{r results}
-# Cannot use mean function within summarise because this will group by event types
-# and take the average over the series of individual events
+```{r death_results}
 
-yearly_data <- group_by(recent_data, YEAR, EVTYPE)        %>%
+yearly_data <- group_by(recent_data, YEAR, EVTYPE)           %>%
                  summarise( yearly_death = sum(FATALITIES))
 
-total_data <- group_by(yearly_data, EVTYPE) %>%
+total_data <- group_by(yearly_data, EVTYPE)                  %>%
                  summarise(total_death = sum(yearly_death),
-                           avg_death   = mean(yearly_death))
+                           avg_death   = mean(yearly_death)) %>%
+                 arrange(desc(total_death))
 
-death_data <- arrange(total_data, desc(total_death))
-
-idx <- yearly_data$EVTYPE %in% death_data$EVTYPE[1:5]
+idx <- yearly_data$EVTYPE %in% total_data$EVTYPE[1:5]
 
 qplot(EVTYPE,
       yearly_death,
@@ -132,34 +146,36 @@ cat('NOTE: Boxplot removes outliers when determining average\n\n')
 
 cat('Table of Average Yearly Fatalities for Top 5 Event Types\n')
 
-print(death_data[1:5,])
+print(total_data[1:5,])
+```
 
-#----------------------------------
+Add information about damage results
 
-yearly_data <- group_by(recent_data, YEAR, EVTYPE)        %>%
+
+```{r damage_results}
+
+yearly_data <- group_by(recent_data, YEAR, EVTYPE)             %>%
                  summarise( yearly_damage = sum(PROPDMGVAL))
 
-total_data <- group_by(yearly_data, EVTYPE) %>%
+total_data <- group_by(yearly_data, EVTYPE)                    %>%
                  summarise(total_damage = sum(yearly_damage),
-                           avg_damage   = mean(yearly_damage))
+                           avg_damage   = mean(yearly_damage)) %>%
+                           arrange(desc(total_damage))
 
-damage_data <- arrange(total_data, desc(total_damage))
+idx <- yearly_data$EVTYPE %in% total_data$EVTYPE[1:5]
 
-idx <- yearly_data$EVTYPE %in% damage_data$EVTYPE[1:5]
-
-xxxxx
 qplot(EVTYPE,
-      total,
-      data = damage_data,
+      yearly_damage,
+      data = yearly_data[idx,],
       geom = 'boxplot',
       xlab = 'Event Type',
-      ylab = 'Yearly Damage (millions)',
+      ylab = 'Yearly Property Damage (millions)',
       main = 'Top 5 Event Types for property damage since 1993'
       )
 
 cat('NOTE: Boxplot removes outliers when determining average\n\n')
 
 cat('Table of Average Yearly Property Damage (millions) for Top 5 Event Types\n')
-print(avg_damage_by_type[1:5,])
+print(total_data[1:5,])
 
 ```
