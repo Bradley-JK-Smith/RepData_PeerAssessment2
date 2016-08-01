@@ -40,7 +40,8 @@ raw_data <- read.csv('repdata%2Fdata%2FStormData.csv.bz2',
                                     'character',     # PROPDMGEXP
                                     rep('NULL', 11)
                                    ),
-                     stringsAsFactors = FALSE)
+                     stringsAsFactors = FALSE
+                    )
 ```
 
 
@@ -105,7 +106,7 @@ damage_plot <- qplot(YEAR,
 grid.arrange( death_plot,
               damage_plot,
               ncol = 1,
-              main = 'Time Series analysis of NOAA Storm Database'
+              top = 'Time Series analysis of NOAA Storm Database'
             )
 
 recent_data <- filter( clean_data, YEAR >= 1993 )
@@ -118,8 +119,9 @@ from 1993 inclusive has been used.
 
 HEAT causes most deaths on average over the considered time period.  
 In addition, this type has highest number of deaths in a single year.  
-FLOOD has next most deaths on average, although TORNADO has second highest number  
+TORNADO has next most deaths on average and also has second highest number  
 of deaths in a single year.  
+FLOOD is very close to TORNADO in terms of total deaths.  
 
 ```{r death_results}
 
@@ -149,8 +151,9 @@ cat('Table of Average Yearly Fatalities for Top 5 Event Types\n')
 print(total_data[1:5,])
 ```
 
-Add information about damage results
-
+FLOOD causes most damage on average over the period considered.  
+There are a number of events that have caused very large property  
+damage and this may cause difficulties in planning.  
 
 ```{r damage_results}
 

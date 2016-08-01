@@ -15,14 +15,6 @@ suppressPackageStartupMessages({
   })
 ```
 
-```
-## Warning: package 'data.table' was built under R version 3.2.5
-```
-
-```
-## Warning: package 'dplyr' was built under R version 3.2.5
-```
-
 
 ## Data Processing
 Data is loaded from the compressed database extraction.  
@@ -45,7 +37,8 @@ raw_data <- read.csv('repdata%2Fdata%2FStormData.csv.bz2',
                                     'character',     # PROPDMGEXP
                                     rep('NULL', 11)
                                    ),
-                     stringsAsFactors = FALSE)
+                     stringsAsFactors = FALSE
+                    )
 ```
 
 
@@ -156,7 +149,7 @@ damage_plot <- qplot(YEAR,
 grid.arrange( death_plot,
               damage_plot,
               ncol = 1,
-              main = 'Time Series analysis of NOAA Storm Database'
+              top = 'Time Series analysis of NOAA Storm Database'
             )
 ```
 
@@ -173,8 +166,9 @@ from 1993 inclusive has been used.
 
 HEAT causes most deaths on average over the considered time period.  
 In addition, this type has highest number of deaths in a single year.  
-FLOOD has next most deaths on average, although TORNADO has second highest number  
+TORNADO has next most deaths on average and also has second highest number  
 of deaths in a single year.  
+FLOOD is very close to TORNADO in terms of total deaths.  
 
 
 ```r
@@ -221,8 +215,7 @@ print(total_data[1:5,])
 ```
 
 ```
-## Source: local data frame [5 x 3]
-## 
+## # A tibble: 5 x 3
 ##      EVTYPE total_death avg_death
 ##       <chr>       <dbl>     <dbl>
 ## 1      HEAT        3138 165.15789
@@ -232,8 +225,9 @@ print(total_data[1:5,])
 ## 5      COLD         729  38.36842
 ```
 
-Add information about damage results
-
+FLOOD causes most damage on average over the period considered.  
+There are a number of events that have caused very large property  
+damage and this may cause difficulties in planning.  
 
 
 ```r
@@ -280,8 +274,7 @@ print(total_data[1:5,])
 ```
 
 ```
-## Source: local data frame [5 x 3]
-## 
+## # A tibble: 5 x 3
 ##        EVTYPE total_damage avg_damage
 ##         <chr>        <dbl>      <dbl>
 ## 1       FLOOD    167529.22  8817.3271
